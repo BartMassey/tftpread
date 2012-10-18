@@ -10,9 +10,21 @@
 #include <netinet/ip.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+
+static char msgbuf[512];
+
+int format_rrq(char *filename) {
+    char *modestr = "octet";
+    msgbuf[0] = 0;
+    msgbuf[1] = 1;
+    strcpy(msgbuf + 2, filename);
+    strcpy(msgbuf + 2 + strlen(filename) + 1, modestr);
+    return 2 + strlen(filename) + 1 + strlen(modestr) + 1;
+}
 
 int main(int argc, char **argv) {
-    assert(argc == 2);
+    assert(argc == 3);
 
     /* XXX Should try for raw IP address first. */
     struct hostent *h = gethostbyname(argv[1]);
@@ -30,7 +42,31 @@ int main(int argc, char **argv) {
     sin.sin_port = htons(69);
     /* XXX Should try all the addresses in the list. */
     sin.sin_addr.s_addr = *(uint32_t *)h->h_addr;
-    int r = connect(s, (const struct sockaddr *)&sin, sizeof(sin));
-    assert(r != -1);
-    /*HERE*/
+
+#if 0
+    srandom(getpid());
+    int myport = random() % (0x8000 - 1024) + 1024;
+
+    struct sockaddr_in sin;
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(myport);
+    sin.sin_addr.s_addr = INADDR_ANY;
+#endif
+
+    int size = format_rrq(argv[2]);
+    int r = sendto(s, msgbuf, size, 0,
+                   (const struct sockaddr *)&sin, (socklen_t)sizeof(sin));
+    assert(r == size);
+
+    struct sockaddr_in ssin;
+    socklen_t ssaddrlen = sizeof(ssin);
+    r = recvfrom(s, (void *)msgbuf, sizeof(msgbuf), 0,
+                 (struct sockaddr *)&ssin, &ssaddrlen);
+    assert(r >= 0);
+
+    sin.sin_family = AF_INET;
+    sin.sin_port = ssin.sin_port;
+    sin.sin_addr.s_addr = *(uint32_t *)h->h_addr;
+
+    return 0;
 }
