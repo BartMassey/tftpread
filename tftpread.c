@@ -68,16 +68,6 @@ int main(int argc, char **argv) {
     /* XXX Should try all the addresses in the list. */
     sin.sin_addr.s_addr = *(uint32_t *)h->h_addr;
 
-#if 0
-    srandom(getpid());
-    int myport = random() % (0x8000 - 1024) + 1024;
-
-    struct sockaddr_in sin;
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(myport);
-    sin.sin_addr.s_addr = INADDR_ANY;
-#endif
-
     int size = format_rrq(argv[2]);
     int r = sendto(s, msgbuf, size, 0,
                    (const struct sockaddr *)&sin, (socklen_t)sizeof(sin));
